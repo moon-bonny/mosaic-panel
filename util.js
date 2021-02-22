@@ -15,7 +15,7 @@ function checkNumber(obj) {
  */
 function getRandomColor() {
   var color = "";
-  for (var i = 0; i < 3; i++) color += parseInt(Math.random() * 256) + ",";
+  for (var i = 0; i < 3; i++) color += parseInt(Math.random() * 255) + ",";
   //去除最后一个逗号
   color = color.slice(0, -1);
   return color;
@@ -33,11 +33,17 @@ function getRandomColor() {
 function getRectPosition(x, y, size) {
   var width = size.w;
   var height = size.h;
-  var x = parseInt(x / width) * width;
-  var y = parseInt(y / height) * height;
+  var indexObj = {
+    i: parseInt(x / width),
+    j: parseInt(y / height),
+  };
+  var pos = {
+    x: indexObj.i * width,
+    y: indexObj.j * height,
+  };
   return {
-    x,
-    y,
+    indexObj,
+    pos,
   };
 }
 
@@ -58,38 +64,61 @@ function drawRect(pos, size, fillStyle, isStroke) {
   ctx.rect(pos.x, pos.y, size.w, size.h);
   ctx.fill();
   isStroke && ctx.stroke();
+  ctx.closePath();
 }
 
-// color: {from, to} rect: {x,y,width,height}
-function rectColorGradientAnimation(colorFrom, rect) {
-  // 动画执行的帧数
-  var start = 0,
-    frames = 200;
-  // 过渡颜色 蓝色 到 红色
-  var from = [0, 0, 255];
-  var to = getRandomColor().split(",");
-  // 动画算法，这里使用Cubic.easeOut算法
-  var cubicEaseOut = function (t, b, c, d) {
-    return c * ((t = t / d - 1) * t * t + 1) + b;
-  };
+/**
+ * @func
+ * @desc 矩形颜色渐变动画
+ * @param {object} startColor 颜色渐变起始色值
+ * @param {number} rect.pos 绘制矩形的坐标
+ * @param {number} rect.size 绘制矩形的大小
+ */
+function rectColorGradientAnimation(startColor, rect) {
+  return new Promise(function (resolve, reject) {
+    // 动画执行的帧数
+    var start = 0,
+      frames = 100;
+    // 过渡颜色
+    var _startColor = startColor;
+    var _endColor = getRandomColor().split(",");
+    // 动画算法，这里使用Cubic.easeOut算法
+    var cubicEaseOut = function (t, b, c, d) {
+      return c * ((t = t / d - 1) * t * t + 1) + b;
+    };
 
-  // 绘制方法
-  var draw = function () {
-    let { x, y, width, height } = rect;
-    context.clearRect(x, y, width, height);
-    // 计算此时r, g, b数值
-    var r = cubicEaseOut(start, from[0], to[0] - from[0], frames);
-    var g = cubicEaseOut(start, from[1], to[1] - from[1], frames);
-    var b = cubicEaseOut(start, from[2], to[2] - from[2], frames);
-    // 可以确定色值
-    context.fillStyle = "rgb(" + [r, g, b].join() + ")";
-    context.arc(width / 2, height / 2, height / 2, 0, 2 * Math.PI);
-    context.fill();
-    // 持续变化
-    start++;
-    if (start <= frames) {
-      requestAnimationFrame(draw);
-    }
-  };
-  draw();
+    // 绘制方法
+    var draw = function () {
+      // 计算此时r, g, b数值
+      var r = cubicEaseOut(
+        start,
+        +_startColor[0],
+        _endColor[0] - _startColor[0],
+        frames
+      );
+      var g = cubicEaseOut(
+        start,
+        +_startColor[1],
+        _endColor[1] - _startColor[1],
+        frames
+      );
+      var b = cubicEaseOut(
+        start,
+        +_startColor[2],
+        _endColor[2] - _startColor[2],
+        frames
+      );
+
+      drawRect(rect.pos, rect.size, "rgb(" + [r, g, b].join() + ")");
+      // 持续变化
+      start++;
+      if (start <= frames) {
+        requestAnimationFrame(draw);
+      } else {
+        drawRect(rect.pos, rect.size, `rgb(${_endColor.toString()})`);
+        resolve(_endColor.toString());
+      }
+    };
+    draw();
+  });
 }

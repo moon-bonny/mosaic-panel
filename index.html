@@ -34,6 +34,7 @@
 	var rect={} //定义每个小格的宽高
 	var numberMask = document.getElementById('numberMask')
 	var colorIslandsNumber = 1
+	var canvasColorInfo = []
 
 	// 控制面板
     function numberCheck(value) {
@@ -65,6 +66,9 @@
     function onConfirm(){
         if(checkForm()){
 			document.getElementById('controlPanel').classList.add('hide');
+			for(var q = 0;q < length;q++){
+				canvasColorInfo[q] = []
+			}
 			initCanvas()
 		} 
     }
@@ -98,25 +102,31 @@
 	
 	function bindEvents() {
 		canvas.onmousedown = function (e) {
-			console.log("🚀 ~ file: index.html ~ line 110 ~ bindEvents ~ e", e)
-			console.log("🚀 ~ file: index.html ~ line 107 ~ bindEvents ~ rect", rect)
+			if (gradientAnimation) { console.info('渐变动画正在执行，请勿频繁操作'); return; }
+
 			e = window.event || e;
 			var eButton = e.button
 
+			var start = getRectPosition(e.pageX, e.pageY, rect)
+
+			var startPos = start.pos
+			var startIndexObj = start.indexObj
+
+			var colorStr = ''
 			if (eButton === 0) { // 点击左键填充颜色
-				// console.log("🚀 ~ file: index.html ~ line 109 ~ initCanvas ~ eButton.pageX/rect.w", e.pageX/rect.w)
-				var colorStr = getRandomColor()
+				colorStr = getRandomColor()
 				var color = `rgb(${colorStr})`
-
-				// ToDo: 记录当前方块色值colorStr和方块位置做功能点7
-
-				var startPos = getRectPosition(e.pageX, e.pageY, rect)
-                console.log("🚀 ~ file: index.html ~ line 123 ~ bindEvents ~ startPos", startPos)
-				// console.log("🚀 ~ file: index.html ~ line 109 ~ initCanvas ~ startX", startX, startY)
+				// 记录当前方块色值color和方块位置做功能点7
+				canvasColorInfo[startIndexObj.i][startIndexObj.j] = {
+					pos: start.pos,
+					color: colorStr.split(',')
+				}
 				drawRect(startPos, rect, color)
-			} else { // 清除颜色
-				var startPos = getRectPosition(e.pageX, e.pageY, rect)
-				drawRect(startPos, rect, "#ffffff", true)
+			} else if(eButton === 2) { // 清除颜色
+				// var startPos = getRectPosition(e.pageX, e.pageY, rect)
+				canvasColorInfo[startIndexObj.i][startIndexObj.j] = null;
+				colorStr = '255,255,255'
+				drawRect(startPos, rect, `rgb(${colorStr})`, true)
 			}
 
 			// ToDo:  遍历画板方块并计算颜色岛数量
@@ -133,12 +143,52 @@
 			return false;//屏蔽浏览器自带的右键菜单
 		};
 
+		var gradientAnimation = false;
 		document.onkeydown = function (event) {
 			var e = event || window.event || arguments.callee.caller.arguments[0];
 			if (e && e.keyCode === 67) { // 按 C
-				console.log('c')
+				if(gradientAnimation) {
+					console.info('渐变动画正在执行，请勿频繁操作');
+					return; 
+				}
 
-				// ToDo:  对每一个已着色的格子随机产生另一个颜色，并且设计一个渐变动画，每个格子要从原来的颜色渐变成新颜色
+				// 对每一个已着色的格子随机产生另一个颜色，并且设计一个渐变动画，每个格子要从原来的颜色渐变成新颜色
+				var animationI = 0;
+				var animationJ = 0;
+				var animation = async function(){
+					gradientAnimation = true
+					var temp = canvasColorInfo[animationI][animationJ]
+					
+					if(temp){
+						var newColor = await rectColorGradientAnimation(temp.color, { pos: temp.pos, size: rect })
+						temp.color = newColor
+					}
+
+					if (animationJ < canvasColorInfo[animationI].length - 1) {
+						animationJ++;
+						animation()
+					}else if(animationI < canvasColorInfo.length - 1){
+						animationI++;
+						animationJ = 0;
+						animation()
+					}else {
+						gradientAnimation = false
+					}
+				}
+				animation()
+
+				/* canvasColorInfo.forEach(function (item, i) {
+					item.forEach(async function(canvasItem, j) {
+						console.log(canvasItem)
+						if(canvasItem) {
+                        console.log("🚀 ~ file: index.html ~ line 192 ~ animation ~ temp.color", temp.color)
+                        console.log("🚀 ~ file: index.html ~ line 192 ~ animation ~ temp.color", temp.color)
+							var newColor = await rectColorGradientAnimation(canvasItem.color, {pos: canvasItem.pos, size: rect})
+							canvasColorInfo[i][j].color = newColor
+							
+						}
+					})
+				}); */
 			}
 		}
 
