@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="index.css">
+    <title>马赛克面板</title>
+</head>
+<body>
+    <!-- 控制面板 -->
+    <div id="controlPanel" class="control-panel">
+            <div>
+                <label>长</label><input id="length" type="text" onblur="lengthCheck(this.value)" placeholder="请输入整数" />
+            </div>
+            <div>
+                <label>宽</label><input id="width" type="text" onblur="widthCheck(this.value)" placeholder="请输入整数"/>
+            </div>
+            <button class="confirm-btn" onclick="onConfirm()">确定</button>
+    </div>
+    <!-- 马赛克面板 -->
+    <div class="mosaic-panel">
+        <canvas id="canvas"></canvas>
+
+		<!-- 颜色岛数字 -->
+		<div id="numberMask" class="number-mask hide"></div>
+	</div>
+</body>
+<script src="util.js"></script>
+<script>
+	var canvas = document.querySelector('#canvas');
+	var ctx = canvas.getContext('2d');
+	var length = width = 0
+	var rect={} //定义每个小格的宽高
+	var numberMask = document.getElementById('numberMask')
+	var colorIslandsNumber = 1
+
+	// 控制面板
+    function numberCheck(value) {
+        var flag = checkNumber(value);
+        if (!flag) {
+            alert('请输入整数！');
+            return false;
+        }
+        return true
+    }
+
+    function lengthCheck() {
+        var value = document.getElementById("length").value;
+		length = value
+        return numberCheck(value)
+    }
+    
+    function widthCheck() {
+        var value = document.getElementById("width").value;
+		width = value
+        return numberCheck(value)
+    }
+
+    function checkForm() {
+        var flag = lengthCheck() && widthCheck();
+        return flag;
+    }
+
+    function onConfirm(){
+        if(checkForm()){
+			document.getElementById('controlPanel').classList.add('hide');
+			initCanvas()
+		} 
+    }
+	
+	// 马赛克画板
+	function initCanvas() {
+		canvas.width = document.body.clientWidth;
+		canvas.height =  document.body.clientHeight;
+
+		//定义每个小格的宽高
+		rect = {
+			w: canvas.width / length,
+			h: canvas.height / width
+		}
+		//绘制横线
+		for (var i = 0; i < canvas.height / rect.h; i++) {
+			ctx.moveTo(0, i * rect.h);
+			ctx.lineTo(canvas.width, i * rect.h);
+		}
+		//绘制竖线
+		for (var j = 0; j < canvas.width / rect.w; j++) {
+			ctx.moveTo(j * rect.w, 0);
+			ctx.lineTo(j * rect.w, canvas.height);
+		}
+		ctx.lineWidth = 0.5;
+		ctx.strokeStyle = '#555';
+		ctx.stroke();
+		
+		bindEvents()
+	}
+	
+	function bindEvents() {
+		canvas.onmousedown = function (e) {
+			console.log("🚀 ~ file: index.html ~ line 110 ~ bindEvents ~ e", e)
+			console.log("🚀 ~ file: index.html ~ line 107 ~ bindEvents ~ rect", rect)
+			e = window.event || e;
+			var eButton = e.button
+
+			if (eButton === 0) { // 点击左键填充颜色
+				// console.log("🚀 ~ file: index.html ~ line 109 ~ initCanvas ~ eButton.pageX/rect.w", e.pageX/rect.w)
+				var colorStr = getRandomColor()
+				var color = `rgb(${colorStr})`
+
+				// ToDo: 记录当前方块色值colorStr和方块位置做功能点7
+
+				var startPos = getRectPosition(e.pageX, e.pageY, rect)
+                console.log("🚀 ~ file: index.html ~ line 123 ~ bindEvents ~ startPos", startPos)
+				// console.log("🚀 ~ file: index.html ~ line 109 ~ initCanvas ~ startX", startX, startY)
+				drawRect(startPos, rect, color)
+			} else { // 清除颜色
+				var startPos = getRectPosition(e.pageX, e.pageY, rect)
+				drawRect(startPos, rect, "#ffffff", true)
+			}
+
+			// ToDo:  遍历画板方块并计算颜色岛数量
+
+			numberMask.innerHTML = colorIslandsNumber
+			numberMask.classList.remove('hide');
+			setTimeout(function () {
+				numberMask.classList.add('hide');
+			}, 1300)
+		}
+
+		document.oncontextmenu = function (e) {
+			var e = e || window.event;
+			return false;//屏蔽浏览器自带的右键菜单
+		};
+
+		document.onkeydown = function (event) {
+			var e = event || window.event || arguments.callee.caller.arguments[0];
+			if (e && e.keyCode === 67) { // 按 C
+				console.log('c')
+
+				// ToDo:  对每一个已着色的格子随机产生另一个颜色，并且设计一个渐变动画，每个格子要从原来的颜色渐变成新颜色
+			}
+		}
+
+		// ToDo: 窗口resize 后重新定义方格大小
+	}
+</script>
+</html>
